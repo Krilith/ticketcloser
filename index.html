@@ -1,294 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    /* Mobile-optimized inputs and layout */
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 10px; margin: 0; }
-    input[type="text"] {
-      font-size: 16px; 
-      padding: 6px;
-      margin: 3px 0;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    
-    /* Touch-friendly operational controls */
-    button {
-      padding: 12px 16px;
-      font-size: 15px;
-      border-radius: 6px;
-      border: 1px solid #bbb;
-      cursor: pointer;
-      margin: 8px 6px 8px 0;
-      font-weight: bold;
-    }
-    #addBtn { background-color: #007aff; color: white; border: none; }
-    #copyAllBtn { background-color: #34c759; color: white; border: none; }
-    #clearFormBtn { background-color: #f2f2f7; color: #333; }
-    
-    /* Compiled Entry List Cards */
-    .entry-card {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 10px;
-      position: relative;
-    }
-    .card-text {
-      white-space: pre-wrap;
-      font-family: monospace;
-      font-size: 14px;
-      margin: 0;
-    }
-    .card-actions { margin-top: 10px; }
-    .card-actions button {
-      padding: 6px 12px;
-      font-size: 13px;
-      margin-right: 5px;
-    }
-    .edit-btn { background-color: #ff9500; color: white; border: none; }
-    .delete-btn { background-color: #ff3b30; color: white; border: none; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Log Generator</title>
+    <style>
+        :root {
+            --primary-color: #007aff;
+            --background-color: #f2f2f7;
+            --card-background: #ffffff;
+            --text-color: #1c1c1e;
+            --border-color: #c6c6c8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        body { background-color: var(--background-color); color: var(--text-color); display: flex; justify-content: center; padding: 16px; min-height: 100vh; }
+        .container { width: 100%; max-width: 400px; background: var(--card-background); border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h2 { font-size: 1.4rem; margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 20px; }
+        .conditional-field { margin-top: 10px; padding-left: 32px; display: none; }
+        .conditional-field.show { display: block; }
+        .nested-field { margin-top: 10px; display: none; }
+        .nested-field.show { display: block; }
+        label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 8px; color: #666; }
+        input[type="text"], select { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; appearance: none; -webkit-appearance: none; }
+        select { background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://w3.org' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 40px; }
+        input[type="text"]:focus, select:focus { outline: none; border-color: var(--primary-color); }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 4px 0; }
+        input[type="checkbox"] { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--border-color); cursor: pointer; }
+        .checkbox-label { font-size: 1rem; user-select: none; }
+        .output-header { margin-top: 24px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .output-box { width: 100%; min-height: 100px; padding: 12px; background-color: #f8f8fa; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+        .btn-copy { background-color: var(--primary-color); color: white; border: none; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; border-radius: 6px; cursor: pointer; }
+        .btn-copy:active { opacity: 0.7; }
+    </style>
 </head>
+<body>
 
-<h2>Reading Compiler Batch Logger</h2>
-<form id="readingForm">
+<div class="container">
+    <h2>Site Log Generator</h2>
+    
+    <div class="form-group">
+        <label for="contactName">Site Contact Name</label>
+        <input type="text" id="contactName" placeholder="Enter name..." oninput="generateText()">
+    </div>
 
-  Pole <input type="text" inputmode="text" autocapitalize="characters" id="pole" style="width: 60px">
-  Fixture <input type="text" inputmode="decimal" id="fixture" style="width: 60px">
-  <br><br>
-  RrBb = <input type="text" inputmode="decimal" id="ohm_rrbb" style="width: 60px"> M&Omega;
-  <input type="text" inputmode="decimal" id="volt_rrbb" style="width: 60px"> V
-  <br>
-  RbBr = <input type="text" inputmode="decimal" id="ohm_rbbr" style="width: 60px"> M&Omega;
-  <input type="text" inputmode="decimal" id="volt_rbbr" style="width: 60px"> V
-  <br>
-  RrBg = <input type="text" inputmode="decimal" id="ohm_rrbg" style="width: 60px"> M&Omega;
-  <input type="text" inputmode="decimal" id="volt_rrbg" style="width: 60px"> V
-  <br>
-  RbBg = <input type="text" inputmode="decimal" id="ohm_rbbg" style="width: 60px"> M&Omega;
-  <input type="text" inputmode="decimal" id="volt_rbbg" style="width: 60px"> V
-  <br>
-  RgBr = <input type="text" inputmode="decimal" id="ohm_rgbr" style="width: 60px"> M&Omega;
-  <input type="text" inputmode="decimal" id="volt_rgbr" style="width: 60px"> V
-  <br>
-  RgBb = <input type="text" inputmode="decimal" id="ohm_rgbb" style="width: 60px"> M&Omega;
-  <input type="text" inputmode="decimal" id="volt_rgbb" style="width: 60px"> V
-  <br><br>
-  Input <input type="text" inputmode="decimal" id="vac" style="width: 60px"> VAC
-  <br>
-  Output <input type="text" inputmode="decimal" id="vdc" style="width: 60px"> VDC
-  <br><br>
-  
-  <!-- Primary Commands -->
-  <button type="button" id="addBtn" onclick="addEntryToList()">Add Entry to List</button>
-  <button type="button" id="clearFormBtn" onclick="resetFormFields()">Reset Form Fields</button>
-</form>
+    <div class="form-group">
+        <label for="controlLinkContact">Control Link Contact</label>
+        <input type="text" id="controlLinkContact" placeholder="Enter name..." oninput="generateText()">
+    </div>
 
-<hr>
+    <div class="form-group">
+        <label class="checkbox-group">
+            <input type="checkbox" id="partsCheckbox" onchange="generateText()">
+            <span class="checkbox-label">Retrieved parts from site</span>
+        </label>
+    </div>
 
-<h3>Log Batch Queue</h3>
-<button type="button" id="copyAllBtn" onclick="copyAllEntries()">Copy Entire Batch Report</button>
-<button type="button" class="delete-btn" onclick="clearEntireBatch()">Clear Entire Batch</button>
+    <div class="form-group">
+        <label class="checkbox-group">
+            <input type="checkbox" id="truckStockCheckbox" onchange="toggleTruckStock()">
+            <span class="checkbox-label">Used truck stock</span>
+        </label>
+        <div class="conditional-field" id="truckPartsContainer">
+            <label for="truckParts">Specify Parts</label>
+            <input type="text" id="truckParts" placeholder="e.g. 2x filters, 1x valve" oninput="generateText()">
+        </div>
+    </div>
 
-<div id="entryList"></div>
+    <div class="form-group" id="restockGroup" style="display: none;">
+        <label class="checkbox-group">
+            <input type="checkbox" id="restockCheckbox" onchange="toggleField('restockCheckbox', 'restockContainer', 'restockItems')">
+            <span class="checkbox-label">Restock required</span>
+        </label>
+        <div class="conditional-field" id="restockContainer">
+            <label for="restockItems">Items Needing Replenishment</label>
+            <input type="text" id="restockItems" placeholder="e.g. 10mm bolts" oninput="generateText()">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="checkbox-group">
+            <input type="checkbox" id="returnTripCheckbox" onchange="generateText()">
+            <span class="checkbox-label">Return trip required for repairs</span>
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label class="checkbox-group">
+            <input type="checkbox" id="companyCamCheckbox" onchange="generateText()">
+            <span class="checkbox-label">CompanyCam</span>
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label class="checkbox-group">
+            <input type="checkbox" id="heightsCheckbox" onchange="toggleHeights()">
+            <span class="checkbox-label">Work performed at heights</span>
+        </label>
+        <div class="conditional-field" id="heightsContainer">
+            <label for="heightsSelect">Select Equipment Used</label>
+            <select id="heightsSelect" onchange="toggleLiftOptions()">
+                <option value="Lift">Lift</option>
+                <option value="Ladder">Ladder</option>
+                <option value="Scaffold">Scaffold</option>
+                <option value="Catwalk">Catwalk</option>
+            </select>
+            
+            <div class="nested-field" id="liftOptionsContainer">
+                <label for="liftStatusSelect" style="margin-top: 10px;">Lift Status</label>
+                <select id="liftStatusSelect" onchange="generateText()">
+                    <option value="Lift has been called off">Lift has been called off</option>
+                    <option value="Lift will remain onsite until the next day">Lift will remain onsite until the next day</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="workPerformed">Work Performed</label>
+        <input type="text" id="workPerformed" placeholder="Describe work done..." oninput="generateText()">
+    </div>
+
+    <div class="output-header">
+        <label>Generated Text</label>
+        <button class="btn-copy" onclick="copyText()">Copy</button>
+    </div>
+    <div class="output-box" id="outputBlock"></div>
+</div>
 
 <script>
-// Array tracking current saved entries in memory
-let savedEntries = [];
-
-// Order array for keyboard navigation and matching data indices
-const inputOrder = [
-  'pole', 'fixture', 'ohm_rrbb', 'volt_rrbb', 'ohm_rbbr', 'volt_rbbr',
-  'ohm_rrbg', 'volt_rrbg', 'ohm_rbbg', 'volt_rbbg', 'ohm_rgbr', 'volt_rgbr',
-  'ohm_rgbb', 'volt_rgbb', 'vac', 'vdc'
-];
-
-// iPhone Next Keypad advancement structure
-document.getElementById('readingForm').addEventListener('keydown', function(event) {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    const currentId = event.target.id;
-    const currentIndex = inputOrder.indexOf(currentId);
-    
-    if (currentIndex !== -1 && currentIndex < inputOrder.length - 1) {
-      document.getElementById(inputOrder[currentIndex + 1]).focus();
-    } else if (currentId === 'vdc') {
-      addEntryToList(); 
+    function toggleField(chkId, conId, inpId) {
+        const chk = document.getElementById(chkId);
+        const con = document.getElementById(conId);
+        const inp = document.getElementById(inpId);
+        
+        if (chk.checked) {
+            con.classList.add('show');
+        } else {
+            con.classList.remove('show');
+            inp.value = inp.tagName === "SELECT" ? "Lift" : "";
+        }
+        generateText();
     }
-  }
-});
 
-// Main text generation processor
-function generateSummaryText() {
-  const getValue = (id) => document.getElementById(id).value.trim();
-  let lines = [];
-  
-  lines.push(`Pole ${getValue('pole')} Fixture ${getValue('fixture')}`);
-  
-  const testPairs = [
-    { label: 'RrBb', ohm: 'ohm_rrbb', volt: 'volt_rrbb' },
-    { label: 'RbBr', ohm: 'ohm_rbbr', volt: 'volt_rbbr' },
-    { label: 'RrBg', ohm: 'ohm_rrbg', volt: 'volt_rrbg' },
-    { label: 'RbBg', ohm: 'ohm_rbbg', volt: 'volt_rbbg' },
-    { label: 'RgBr', ohm: 'ohm_rgbr', volt: 'volt_rgbr' },
-    { label: 'RgBb', ohm: 'ohm_rgbb', volt: 'volt_rgbb' }
-  ];
-  
-  testPairs.forEach(pair => {
-    const oVal = getValue(pair.ohm);
-    const vVal = getValue(pair.volt);
-    if (oVal || vVal) lines.push(`${pair.label} = ${oVal} MΩ ${vVal} V`);
-  });
-  
-  const vacVal = getValue('vac');
-  const vdcVal = getValue('vdc');
-  if (vacVal || vdcVal) lines.push(`Input ${vacVal} VAC, Output ${vdcVal} VDC`);
-  
-  return lines.join('\n');
-}
+    function toggleTruckStock() {
+        const chk = document.getElementById('truckStockCheckbox');
+        const con = document.getElementById('truckPartsContainer');
+        const restockGroup = document.getElementById('restockGroup');
+        const restockChk = document.getElementById('restockCheckbox');
+        const restockCon = document.getElementById('restockContainer');
+        const restockInp = document.getElementById('restockItems');
 
-// Push active reading array context onto view stack
-function addEntryToList() {
-  const poleVal = document.getElementById('pole').value.trim();
-  if (!poleVal) {
-    alert("Please fill out at least a Pole identifier before saving.");
-    return;
-  }
-  
-  // Capture current form object state
-  const rawData = {};
-  inputOrder.forEach(id => {
-    rawData[id] = document.getElementById(id).value.trim();
-  });
-  
-  const entryText = generateSummaryText();
-  
-  // Save both generated plain text and raw input values for easy editing extraction
-  savedEntries.push({ text: entryText, raw: rawData });
-  
-  // Sort entries numerically based on the fixture value
-  sortEntriesByFixture();
-  
-  // Completely wipe all form fields out, including Pole
-  document.getElementById('readingForm').reset();
-  document.getElementById('pole').focus(); 
-  
-  renderList();
-}
+        if (chk.checked) {
+            con.classList.add('show');
+            restockGroup.style.display = 'block';
+        } else {
+            con.classList.remove('show');
+            document.getElementById('truckParts').value = "";
+            
+            restockChk.checked = false;
+            restockCon.classList.remove('show');
+            restockInp.value = "";
+            restockGroup.style.display = 'none';
+        }
+        generateText();
+    }
 
-// Sort engine evaluating fixture input properties numerically
-function sortEntriesByFixture() {
-  savedEntries.sort((a, b) => {
-    const fixA = parseFloat(a.raw.fixture) || 0;
-    const fixB = parseFloat(b.raw.fixture) || 0;
-    return fixA - fixB;
-  });
-}
+    function toggleHeights() {
+        const chk = document.getElementById('heightsCheckbox');
+        const con = document.getElementById('heightsContainer');
+        if (chk.checked) {
+            con.classList.add('show');
+        } else {
+            con.classList.remove('show');
+            document.getElementById('heightsSelect').value = "Lift";
+        }
+        toggleLiftOptions();
+    }
 
-// Render entries dynamically into standard HTML structures
-function renderList() {
-  const container = document.getElementById('entryList');
-  container.innerHTML = '';
-  
-  savedEntries.forEach((entryObj, index) => {
-    const card = document.createElement('div');
-    card.className = 'entry-card';
-    
-    card.innerHTML = `
-      <pre class="card-text">${entryObj.text}</pre>
-      <div class="card-actions">
-        <button type="button" id="copySingle-${index}" onclick="copySingleEntry(${index})">Copy This Entry</button>
-        <button type="button" class="edit-btn" onclick="editEntry(${index})">Edit</button>
-        <button type="button" class="delete-btn" onclick="deleteEntry(${index})">Delete</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
+    function toggleLiftOptions() {
+        const heightsChecked = document.getElementById('heightsCheckbox').checked;
+        const equipment = document.getElementById('heightsSelect').value;
+        const liftCon = document.getElementById('liftOptionsContainer');
 
-function copySingleEntry(index) {
-  const btn = document.getElementById(`copySingle-${index}`);
-  triggerExecutionCopy(savedEntries[index].text, btn, "Copied Entry!");
-}
+        if (heightsChecked && equipment === 'Lift') {
+            liftCon.classList.add('show');
+        } else {
+            liftCon.classList.remove('show');
+        }
+        generateText();
+    }
 
-function copyAllEntries() {
-  if (savedEntries.length === 0) return alert("The log batch queue is empty.");
-  const btn = document.getElementById('copyAllBtn');
-  const fullTextArray = savedEntries.map(e => e.text);
-  const fullBatchReport = fullTextArray.join('\n\n====================\n\n');
-  triggerExecutionCopy(fullBatchReport, btn, "Batch Copied!");
-}
+    function generateText() {
+        const name = document.getElementById('contactName').value.trim();
+        const controlLink = document.getElementById('controlLinkContact').value.trim();
+        const parts = document.getElementById('partsCheckbox').checked;
+        const returnTrip = document.getElementById('returnTripCheckbox').checked;
+        const companyCam = document.getElementById('companyCamCheckbox').checked;
+        const work = document.getElementById('workPerformed').value.trim();
+        const truck = document.getElementById('truckStockCheckbox').checked;
+        const truckInp = document.getElementById('truckParts').value.trim();
+        const restock = document.getElementById('restockCheckbox').checked;
+        const restockInp = document.getElementById('restockItems').value.trim();
+        const heights = document.getElementById('heightsCheckbox').checked;
+        const heightsSel = document.getElementById('heightsSelect').valuace;
+        const liftStatus = document.getElementById('liftStatusSelect').value;
+        
+        let standardSegments = [];
+        let heightsSegment = "";
 
-// Extracts dynamic object state and populates the main editing form
-function editEntry(index) {
-  const entry = savedEntries[index];
-  
-  // Load card data directly back into the inputs
-  inputOrder.forEach(id => {
-    document.getElementById(id).value = entry.raw[id] || '';
-  });
-  
-  // Remove the old entry card from the lower queue list
-  savedEntries.splice(index, 1);
-  renderList();
-  
-  // Send focus straight back to the Pole field to start working
-  document.getElementById('pole').focus();
-}
+        if (name) standardSegments.push(`Arrived on site and spoke with '${name}'.`);
+        if (parts) standardSegments.push("Retrieved parts from site.");
+        if (returnTrip) standardSegments.push("A return trip is required to complete repairs.");
+        if (companyCam) standardSegments.push("See CompanyCam for additional details.");
+        
+        let workBlockParts = [];
+        if (controlLink) {
+            workBlockParts.push(`Contacted ${controlLink} at Control Link for troubleshooting assistance`);
+        }
+        if (work) {
+            workBlockParts.push(work);
+        }
 
-function deleteEntry(index) {
-  savedEntries.splice(index, 1);
-  renderList();
-}
+        if (workBlockParts.length > 0) {
+            standardSegments.push(`--------------------\n${workBlockParts.join("\n")}\n--------------------`);
+        }
 
-function resetFormFields() {
-  if (confirm("Clear current form fields? (Won't affect saved items below)")) {
-    document.getElementById('readingForm').reset();
-  }
-}
+        if (truck && truckInp) standardSegments.push(`The following parts were used from truck stock: ${truckInp}.`);
+        if (restock && restockInp) standardSegments.push(`The following items need replenishment for truck stock: ${restockInp}.`);
 
-function clearEntireBatch() {
-  if (confirm("Delete ALL entries in the batch log below?")) {
-    savedEntries = [];
-    renderList();
-  }
-}
+        if (heights) {
+            if (heightsSel === 'Lift') {
+                heightsSegment = `Work was performed at heights using a ${heightsSel}. ${liftStatus}.`;
+            } else {
+                heightsSegment = `Work was performed at heights using a ${heightsSel}.`;
+            }
+        }
 
-// Safe cross-platform copy execution pipeline
-function triggerExecutionCopy(textStr, buttonEl, successLabel) {
-  const previousLabel = buttonEl.innerText;
-  const previousBg = buttonEl.style.backgroundColor;
+        let finalLines = [];
+        if (standardSegments.length > 0) {
+            finalLines.push(standardSegments.join("\n"));
+        }
+        if (heightsSegment) {
+            finalLines.push("\n" + heightsSegment);
+        }
 
-  const successAction = () => {
-    buttonEl.innerText = successLabel;
-    buttonEl.style.backgroundColor = "#d4edda";
-    if (buttonEl.id !== 'copyAllBtn') buttonEl.style.color = "#155724";
-    setTimeout(() => {
-      buttonEl.innerText = previousLabel;
-      buttonEl.style.backgroundColor = previousBg;
-      buttonEl.style.color = "";
-    }, 1500);
-  };
+        document.getElementById('outputBlock').textContent = finalLines.join("");
+    }
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(textStr).then(successAction).catch(() => fallbackCopyEngine(textStr, successAction));
-  } else {
-    fallbackCopyEngine(textStr, successAction);
-  }
-}
+    function copyText() {
+        const text = document.getElementById('outputBlock').textContent;
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector('.btn-copy');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        }).catch(err => console.error(err));
+    }
 
-function fallbackCopyEngine(text, callback) {
-  const textArea = document.createElement("textarea");
-  textArea.value = text;
-  textArea.style.position = "fixed";
-  textArea.style.left = "-999999px";
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-  textArea.setSelectionRange(0, 99999);
-  try { document.execCommand('copy'); callback(); } catch (err) { console.error(err); }
-  document.body.removeChild(textArea);
-}
+    generateText();
 </script>
+
+</body>
+</html>
