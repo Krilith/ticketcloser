@@ -1,0 +1,294 @@
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Mobile-optimized inputs and layout */
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 10px; margin: 0; }
+    input[type="text"] {
+      font-size: 16px; 
+      padding: 6px;
+      margin: 3px 0;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    
+    /* Touch-friendly operational controls */
+    button {
+      padding: 12px 16px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #bbb;
+      cursor: pointer;
+      margin: 8px 6px 8px 0;
+      font-weight: bold;
+    }
+    #addBtn { background-color: #007aff; color: white; border: none; }
+    #copyAllBtn { background-color: #34c759; color: white; border: none; }
+    #clearFormBtn { background-color: #f2f2f7; color: #333; }
+    
+    /* Compiled Entry List Cards */
+    .entry-card {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      position: relative;
+    }
+    .card-text {
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 14px;
+      margin: 0;
+    }
+    .card-actions { margin-top: 10px; }
+    .card-actions button {
+      padding: 6px 12px;
+      font-size: 13px;
+      margin-right: 5px;
+    }
+    .edit-btn { background-color: #ff9500; color: white; border: none; }
+    .delete-btn { background-color: #ff3b30; color: white; border: none; }
+  </style>
+</head>
+
+<h2>Reading Compiler Batch Logger</h2>
+<form id="readingForm">
+
+  Pole <input type="text" inputmode="text" autocapitalize="characters" id="pole" style="width: 60px">
+  Fixture <input type="text" inputmode="decimal" id="fixture" style="width: 60px">
+  <br><br>
+  RrBb = <input type="text" inputmode="decimal" id="ohm_rrbb" style="width: 60px"> M&Omega;
+  <input type="text" inputmode="decimal" id="volt_rrbb" style="width: 60px"> V
+  <br>
+  RbBr = <input type="text" inputmode="decimal" id="ohm_rbbr" style="width: 60px"> M&Omega;
+  <input type="text" inputmode="decimal" id="volt_rbbr" style="width: 60px"> V
+  <br>
+  RrBg = <input type="text" inputmode="decimal" id="ohm_rrbg" style="width: 60px"> M&Omega;
+  <input type="text" inputmode="decimal" id="volt_rrbg" style="width: 60px"> V
+  <br>
+  RbBg = <input type="text" inputmode="decimal" id="ohm_rbbg" style="width: 60px"> M&Omega;
+  <input type="text" inputmode="decimal" id="volt_rbbg" style="width: 60px"> V
+  <br>
+  RgBr = <input type="text" inputmode="decimal" id="ohm_rgbr" style="width: 60px"> M&Omega;
+  <input type="text" inputmode="decimal" id="volt_rgbr" style="width: 60px"> V
+  <br>
+  RgBb = <input type="text" inputmode="decimal" id="ohm_rgbb" style="width: 60px"> M&Omega;
+  <input type="text" inputmode="decimal" id="volt_rgbb" style="width: 60px"> V
+  <br><br>
+  Input <input type="text" inputmode="decimal" id="vac" style="width: 60px"> VAC
+  <br>
+  Output <input type="text" inputmode="decimal" id="vdc" style="width: 60px"> VDC
+  <br><br>
+  
+  <!-- Primary Commands -->
+  <button type="button" id="addBtn" onclick="addEntryToList()">Add Entry to List</button>
+  <button type="button" id="clearFormBtn" onclick="resetFormFields()">Reset Form Fields</button>
+</form>
+
+<hr>
+
+<h3>Log Batch Queue</h3>
+<button type="button" id="copyAllBtn" onclick="copyAllEntries()">Copy Entire Batch Report</button>
+<button type="button" class="delete-btn" onclick="clearEntireBatch()">Clear Entire Batch</button>
+
+<div id="entryList"></div>
+
+<script>
+// Array tracking current saved entries in memory
+let savedEntries = [];
+
+// Order array for keyboard navigation and matching data indices
+const inputOrder = [
+  'pole', 'fixture', 'ohm_rrbb', 'volt_rrbb', 'ohm_rbbr', 'volt_rbbr',
+  'ohm_rrbg', 'volt_rrbg', 'ohm_rbbg', 'volt_rbbg', 'ohm_rgbr', 'volt_rgbr',
+  'ohm_rgbb', 'volt_rgbb', 'vac', 'vdc'
+];
+
+// iPhone Next Keypad advancement structure
+document.getElementById('readingForm').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const currentId = event.target.id;
+    const currentIndex = inputOrder.indexOf(currentId);
+    
+    if (currentIndex !== -1 && currentIndex < inputOrder.length - 1) {
+      document.getElementById(inputOrder[currentIndex + 1]).focus();
+    } else if (currentId === 'vdc') {
+      addEntryToList(); 
+    }
+  }
+});
+
+// Main text generation processor
+function generateSummaryText() {
+  const getValue = (id) => document.getElementById(id).value.trim();
+  let lines = [];
+  
+  lines.push(`Pole ${getValue('pole')} Fixture ${getValue('fixture')}`);
+  
+  const testPairs = [
+    { label: 'RrBb', ohm: 'ohm_rrbb', volt: 'volt_rrbb' },
+    { label: 'RbBr', ohm: 'ohm_rbbr', volt: 'volt_rbbr' },
+    { label: 'RrBg', ohm: 'ohm_rrbg', volt: 'volt_rrbg' },
+    { label: 'RbBg', ohm: 'ohm_rbbg', volt: 'volt_rbbg' },
+    { label: 'RgBr', ohm: 'ohm_rgbr', volt: 'volt_rgbr' },
+    { label: 'RgBb', ohm: 'ohm_rgbb', volt: 'volt_rgbb' }
+  ];
+  
+  testPairs.forEach(pair => {
+    const oVal = getValue(pair.ohm);
+    const vVal = getValue(pair.volt);
+    if (oVal || vVal) lines.push(`${pair.label} = ${oVal} MΩ ${vVal} V`);
+  });
+  
+  const vacVal = getValue('vac');
+  const vdcVal = getValue('vdc');
+  if (vacVal || vdcVal) lines.push(`Input ${vacVal} VAC, Output ${vdcVal} VDC`);
+  
+  return lines.join('\n');
+}
+
+// Push active reading array context onto view stack
+function addEntryToList() {
+  const poleVal = document.getElementById('pole').value.trim();
+  if (!poleVal) {
+    alert("Please fill out at least a Pole identifier before saving.");
+    return;
+  }
+  
+  // Capture current form object state
+  const rawData = {};
+  inputOrder.forEach(id => {
+    rawData[id] = document.getElementById(id).value.trim();
+  });
+  
+  const entryText = generateSummaryText();
+  
+  // Save both generated plain text and raw input values for easy editing extraction
+  savedEntries.push({ text: entryText, raw: rawData });
+  
+  // Sort entries numerically based on the fixture value
+  sortEntriesByFixture();
+  
+  // Completely wipe all form fields out, including Pole
+  document.getElementById('readingForm').reset();
+  document.getElementById('pole').focus(); 
+  
+  renderList();
+}
+
+// Sort engine evaluating fixture input properties numerically
+function sortEntriesByFixture() {
+  savedEntries.sort((a, b) => {
+    const fixA = parseFloat(a.raw.fixture) || 0;
+    const fixB = parseFloat(b.raw.fixture) || 0;
+    return fixA - fixB;
+  });
+}
+
+// Render entries dynamically into standard HTML structures
+function renderList() {
+  const container = document.getElementById('entryList');
+  container.innerHTML = '';
+  
+  savedEntries.forEach((entryObj, index) => {
+    const card = document.createElement('div');
+    card.className = 'entry-card';
+    
+    card.innerHTML = `
+      <pre class="card-text">${entryObj.text}</pre>
+      <div class="card-actions">
+        <button type="button" id="copySingle-${index}" onclick="copySingleEntry(${index})">Copy This Entry</button>
+        <button type="button" class="edit-btn" onclick="editEntry(${index})">Edit</button>
+        <button type="button" class="delete-btn" onclick="deleteEntry(${index})">Delete</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function copySingleEntry(index) {
+  const btn = document.getElementById(`copySingle-${index}`);
+  triggerExecutionCopy(savedEntries[index].text, btn, "Copied Entry!");
+}
+
+function copyAllEntries() {
+  if (savedEntries.length === 0) return alert("The log batch queue is empty.");
+  const btn = document.getElementById('copyAllBtn');
+  const fullTextArray = savedEntries.map(e => e.text);
+  const fullBatchReport = fullTextArray.join('\n\n====================\n\n');
+  triggerExecutionCopy(fullBatchReport, btn, "Batch Copied!");
+}
+
+// Extracts dynamic object state and populates the main editing form
+function editEntry(index) {
+  const entry = savedEntries[index];
+  
+  // Load card data directly back into the inputs
+  inputOrder.forEach(id => {
+    document.getElementById(id).value = entry.raw[id] || '';
+  });
+  
+  // Remove the old entry card from the lower queue list
+  savedEntries.splice(index, 1);
+  renderList();
+  
+  // Send focus straight back to the Pole field to start working
+  document.getElementById('pole').focus();
+}
+
+function deleteEntry(index) {
+  savedEntries.splice(index, 1);
+  renderList();
+}
+
+function resetFormFields() {
+  if (confirm("Clear current form fields? (Won't affect saved items below)")) {
+    document.getElementById('readingForm').reset();
+  }
+}
+
+function clearEntireBatch() {
+  if (confirm("Delete ALL entries in the batch log below?")) {
+    savedEntries = [];
+    renderList();
+  }
+}
+
+// Safe cross-platform copy execution pipeline
+function triggerExecutionCopy(textStr, buttonEl, successLabel) {
+  const previousLabel = buttonEl.innerText;
+  const previousBg = buttonEl.style.backgroundColor;
+
+  const successAction = () => {
+    buttonEl.innerText = successLabel;
+    buttonEl.style.backgroundColor = "#d4edda";
+    if (buttonEl.id !== 'copyAllBtn') buttonEl.style.color = "#155724";
+    setTimeout(() => {
+      buttonEl.innerText = previousLabel;
+      buttonEl.style.backgroundColor = previousBg;
+      buttonEl.style.color = "";
+    }, 1500);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textStr).then(successAction).catch(() => fallbackCopyEngine(textStr, successAction));
+  } else {
+    fallbackCopyEngine(textStr, successAction);
+  }
+}
+
+function fallbackCopyEngine(text, callback) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.left = "-999999px";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  textArea.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); callback(); } catch (err) { console.error(err); }
+  document.body.removeChild(textArea);
+}
+</script>
